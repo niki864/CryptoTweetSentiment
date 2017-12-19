@@ -1,21 +1,9 @@
-# code in DMAR chapter
-
-# This code was last run sucessfully on Nov 2013 in the this environment:
-# R version 3.0.2 (2013-09-25)
-# Platform: x86_64-w64-mingw32/x64 (64-bit)
-
-# and these packages:
-
-# [1] topicmodels_0.1-12 slam_0.1-30        pvclust_1.2-2      plyr_1.8           Snowball_0.0-10   
-# [6] rJava_0.9-4        tm_0.5-9.1         Matrix_1.1-0       sna_2.3-1          igraph_0.6.6      
-# [11] ggplot2_0.9.3.1    stringr_0.6.2
-
-# get package with functions for interacting with Twitter.com
+#Package for Twitter in R
 require(twitteR) 
 
 # Declare Twitter API Credentials
 source(file = "AuthKeys.R")
-
+#Good practice to keep API credentials in separate file
 # Create Twitter Connection
 setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
 #Get last 1500 tweets 
@@ -27,9 +15,7 @@ names(df)
 # look at the first three rows to check content
 head(df,3) 
 
-
 #Write the df to a csv for our reference
- 
 write.table(df, file = "Tweets.csv", na="", sep = ",",row.names = FALSE)
 # see how many unique Twitter accounts in the sample
 length(unique(df$screenName)) 
@@ -51,8 +37,8 @@ rand.df  <-  merge(randuser, df, by="screenName")
 # This is based on Jeffrey Breen's excellent tutorial at http://jeffreybreen.wordpress.com/2011/07/04/twitter-text-mining-r-slides/
 
 # download sentiment word list from here: http://www.cs.uic.edu/~liub/FBS/opinion-lexicon-English.rar un-rar and put somewhere logical on your computer
-hu.liu.pos = scan('E:/My Documents/My Papers/conferences/SAA2010/opinion-lexicon-English/positive-words.txt', what = 'character',comment.char=';') #load +ve sentiment word list
-hu.liu.neg = scan('E:/My Documents/My Papers/conferences/SAA2010/opinion-lexicon-English/negative-words.txt',what = 'character',comment.char= ';') #load -ve sentiment word list
+hu.liu.pos = scan(file = 'positive-words.txt', what = 'character',comment.char=';') #load +ve sentiment word list
+hu.liu.neg = scan(file = 'negative-words.txt',what = 'character',comment.char= ';') #load -ve sentiment word list
 pos.words = c(hu.liu.pos)
 neg.words = c(hu.liu.neg)
 score.sentiment = function(sentences, pos.words, neg.words, .progress='none')
@@ -97,27 +83,74 @@ score.sentiment = function(sentences, pos.words, neg.words, .progress='none')
   return(scores.df)
 }
 require(plyr)
-aaa.text <- df$text # get text of tweets
-length(aaa.text) #check how many tweets, make sure it agrees with the original sample size
-head(aaa.text, 5) #check content sample, see that it looks as expected, no weird characters, etc. 
-aaa.scores <- score.sentiment(aaa.text,pos.words,neg.words,.progress='text') # get scores for the tweet text 
+# get text of tweets
+unclean.tweet <- df$text
+require(gsub)
+
+#Time to clean the tweet data up. 
+#Use gsub function to do this. 
+#Remove & characters
+clean_tweet = gsub("&amp", "", unclean.tweet)
+#Remove Retweet notations
+clean_tweet = gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", clean_tweet)
+#Remove mentions
+clean_tweet = gsub("@\\w+", "", clean_tweet)
+#Remove punctuations (also takes care of emojis)
+clean_tweet = gsub("[[:punct:]]", "", clean_tweet)
+#Remove digits
+clean_tweet = gsub("[[:digit:]]", "", clean_tweet)
+#Remove urls
+clean_tweet = gsub("http\\w+", "", clean_tweet)
+#Remove tabspaces
+clean_tweet = gsub("[ \t]{2,}", "", clean_tweet)
+clean_tweet = gsub("^\\s+|\\s+$", "", clean_tweet) 
+
+#get rid of unnecessary spaces
+clean_tweet <- str_replace_all(clean_tweet," "," ")
+# Get rid of URLs
+clean_tweet <- str_replace_all(clean_tweet, "http://[a-z,A-Z,0-9]*", " ")
+# Take out retweet header, there is only one
+clean_tweet <- str_replace(clean_tweet,"RT @[a-z,A-Z]*: ","")
+# Get rid of hashtags
+clean_tweet <- str_replace_all(clean_tweet,"#[a-z,A-Z]*","")
+# Get rid of references to other screennames
+clean_tweet <- str_replace_all(clean_tweet,"@[a-z,A-Z]*","")   
+clean_tweet <- gsub("\\n*","",clean_tweet)
+
+temphld <- grep("clean_tweet", iconv(clean_tweet, "latin1", "ASCII", sub="clean_tweet"))
+# subset original vector of words to exclude words with non-ASCII char
+clean_tweet <- clean_tweet[-temphld]
+head(clean_tweet)
+bitcoindata.text <- clean_tweet
+length(bitcoindata.text) #check how many tweets, make sure it agrees with the original sample size
+head(bitcoindata.text, 5) #check content sample, see that it looks as expected, no weird characters, etc. 
+bitcoindata.scores <- score.sentiment(bitcoindata.text,pos.words,neg.words,.progress='text') # get scores for the tweet text 
 # create a histogram of sentiment scores
-ggplot(aaa.scores, aes(x=score)) + 
+require(ggplot2)
+ggplot(bitcoindata.scores, aes(x=score)) + 
   geom_histogram(binwidth=1) + 
   xlab("Sentiment score") + 
   ylab("Frequency") + 
   theme_bw()  + 
-  opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + 
-  opts(axis.title.y=theme_text(size = 14, angle=90, vjust = -0.25)) + 
-  opts(plot.margin = unit(c(1,1,2,2), "lines")) 
-aaa.pos <- subset(aaa.scores,aaa.scores$score >= 2) # get tweets with only very +ve scores
-aaa.neg <- subset(aaa.scores,aaa.scores$score <= -2) # get tweets with only very -ve scores
+  theme(axis.title.x = element_text(vjust = -0.5, size = 14)) + 
+  theme(axis.title.y=element_text(size = 14, angle=90, vjust = -0.25)) + 
+  theme(plot.margin = unit(c(1,1,2,2), "lines")) 
+bitcoin.pos <- subset(bitcoindata.scores,bitcoindata.scores$score >= 2) # get tweets with only very +ve scores
+bitcoin.neg <- subset(bitcoindata.scores,bitcoindata.scores$score <= -2) # get tweets with only very -ve scores
 
 # Now create subset based on tweets with certain words, such as the high frequency words identified in the text mining. eg. science
-scien <- subset(aaa.scores, regexpr("scien", aaa.scores$text) > 0)   # extract tweets containing only 'scien'
+btc <- subset(bitcoindata.scores, regexpr("Bitcoin|BTC", bitcoindata.scores$text) > 0)   # extract tweets containing only 'scien'
 # plot histogram for this token, 
-ggplot(scien, aes(x = score)) + geom_histogram(binwidth = 1) + xlab("Sentiment score for the token 'scien'") + ylab("Frequency") + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y = theme_text(size = 14, angle = 90, vjust = -0.25)) + opts(plot.margin = unit(c(1,1,2,2), "lines")) 
-# repeat this block with different high frequency words
+ggplot(btc, aes(x = score)) + geom_histogram(binwidth = 1) + xlab("Sentiment score for the token 'Bitcoin'") + ylab("Frequency") + theme_bw()  + theme(axis.title.x = element_text(vjust = -0.5, size = 14)) + theme(axis.title.y = element_text(size = 14, angle = 90, vjust = -0.25)) + theme(plot.margin = unit(c(1,1,2,2), "lines")) 
+# repeat for word = ether
+eth <- subset(bitcoindata.scores, regexpr("Ether|Ethereum|ETH", bitcoindata.scores$text) > 0)   # extract tweets containing only 'ether'
+# plot histogram for this token, 
+ggplot(eth, aes(x = score)) + geom_histogram(binwidth = 1) + xlab("Sentiment score for the token 'Ethereum'") + ylab("Frequency") + theme_bw()  + theme(axis.title.x = element_text(vjust = -0.5, size = 14)) + theme(axis.title.y = element_text(size = 14, angle = 90, vjust = -0.25)) + theme(plot.margin = unit(c(1,1,2,2), "lines")) 
+# repeat for word = litecoin
+ltc <- subset(bitcoindata.scores, regexpr("Litecoin|LTC", bitcoindata.scores$text) > 0)   # extract tweets containing only 'scien'
+# plot histogram for this token, 
+ggplot(ltc, aes(x = score)) + geom_histogram(binwidth = 1) + xlab("Sentiment score for the token 'Litecoin'") + ylab("Frequency") + theme_bw()  + theme(axis.title.x = element_text(vjust = -0.5, size = 14)) + theme(axis.title.y = element_text(size = 14, angle = 90, vjust = -0.25)) + theme(plot.margin = unit(c(1,1,2,2), "lines")) 
+
 
 a.tdm.sp <- removeSparseTerms(a.tdm, sparse=0.989)  # I found I had to iterate over this to ensure the tdm doesn't get too small... for example: 0.990 nrow=88, 0.989, nrow=67, 0.985, nrow=37, 0.98 nrow=23, 0.95 nrow=6
 a.tdm.sp.df <- as.data.frame(inspect(a.tdm.sp )) # convert document term matrix to data frame
