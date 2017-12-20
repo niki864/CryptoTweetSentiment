@@ -7,7 +7,7 @@ source(file = "AuthKeys.R")
 #Create Twitter Connection
 setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
 #Get last 1500 tweets with keyword #bitcoin
-bitcoindata <- searchTwitter('#trump', n=1500) 
+bitcoindata <- searchTwitter('#', n=1500) 
 # convert to data frame
 df <- do.call("rbind", lapply(bitcoindata, as.data.frame)) 
 #Get column names to see how the structure looks

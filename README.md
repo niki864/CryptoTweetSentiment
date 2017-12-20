@@ -29,16 +29,20 @@ The scores are then stored and used to generate graph plots based on sentiment s
 ## Summary
 
 Histogram modeling using ggplot is done using the sentiment score on the overall dataset.
+
+![alt tag](https://user-images.githubusercontent.com/10093954/34191361-5422d620-e514-11e7-9681-c36ce0085d80.jpeg)
+
 Then we do the same for the term Bitcoin alone.
 
-
+![alt tag](https://user-images.githubusercontent.com/10093954/34191362-5443caf6-e514-11e7-93a0-4ac6148bfa59.jpeg)
 
 Likewise for Ethereum
 
+![alt tag](https://user-images.githubusercontent.com/10093954/34191363-5466418a-e514-11e7-95d3-33919e847b8c.jpeg)
 
 Likewise for Litecoin
 
-
+![alt tag](https://user-images.githubusercontent.com/10093954/34191364-5499741a-e514-11e7-8c90-c5fe4be3f759.jpeg)
 
 ## License
 
